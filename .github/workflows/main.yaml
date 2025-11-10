@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  AWS_REGION: ap-south-1
+  AWS_REGION: ap-east-1
   ECR_REPOSITORY: wisecow
   CLUSTER_NAME: my-eks-cluster
   DEPLOYMENT_NAME: wisecow-deployment
