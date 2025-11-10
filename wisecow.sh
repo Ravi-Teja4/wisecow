@@ -7,40 +7,38 @@ rm -f $RSPFILE
 mkfifo $RSPFILE
 
 get_api() {
-	read line
-	echo $line
+    read line
+    echo $line
 }
 
 handleRequest() {
-    # 1) Process the request
-	get_api
-	mod=`fortune`
+    get_api
+    mod=$(/usr/games/fortune)
 
 cat <<EOF > $RSPFILE
 HTTP/1.1 200
 
 
-<pre>`cowsay $mod`</pre>
+<pre>$(/usr/games/cowsay "$mod")</pre>
 EOF
 }
 
 prerequisites() {
-	command -v cowsay >/dev/null 2>&1 &&
-	command -v fortune >/dev/null 2>&1 || 
-		{ 
-			echo "Install prerequisites."
-			exit 1
-		}
+    if [ ! -x /usr/games/cowsay ] || [ ! -x /usr/games/fortune ]; then
+        echo "Install prerequisites."
+        exit 1
+    fi
 }
 
 main() {
-	prerequisites
-	echo "Wisdom served on port=$SRVPORT..."
+    prerequisites
+    echo "Wisdom served on port=$SRVPORT..."
 
-	while [ 1 ]; do
-		cat $RSPFILE | nc -lN $SRVPORT | handleRequest
-		sleep 0.01
-	done
+    while true; do
+        cat $RSPFILE | nc -l -p $SRVPORT -q 1 | handleRequest
+        sleep 0.01
+    done
 }
 
 main
+
