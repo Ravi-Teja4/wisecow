@@ -16,11 +16,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write       # Required for OIDC authentication
+      id-token: write       # Required for OIDC
       contents: read        # Required to checkout code
 
     steps:
-      # 1️⃣ Checkout source code
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -37,7 +37,7 @@ jobs:
           aws ecr describe-repositories --repository-names "${{ env.ECR_REPOSITORY }}" || \
           aws ecr create-repository --repository-name "${{ env.ECR_REPOSITORY }}"
 
-      # 4️⃣ Login to ECR
+      # 4️⃣ Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
