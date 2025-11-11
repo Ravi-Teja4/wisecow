@@ -11,6 +11,8 @@ env:
   CLUSTER_NAME: my-eks-cluster
   ACCOUNT_ID: 625684987071
   ECR_REGISTRY: 625684987071.dkr.ecr.us-east-1.amazonaws.com
+  ELB_DNS: a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com
+  SERVICE_NAME: wisecow-service
 
 jobs:
   deploy:
@@ -43,7 +45,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       
-      # ✅ Build & Push image
+      # ✅ Build & Push Docker image
       - name: Build and Push Docker image
         env:
           IMAGE_TAG: latest
@@ -60,15 +62,27 @@ jobs:
       - name: Test kubectl
         run: kubectl get nodes
       
-      # ✅ Deploy manifests (skip secret creation)
+      # ✅ Create self-signed TLS secret
+      - name: Create Self-Signed TLS Secret
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout tls.key -out tls.crt \
+            -subj "/CN=${ELB_DNS}"
+          kubectl create secret tls wisecow-tls \
+            --cert=tls.crt \
+            --key=tls.key \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      # ✅ Deploy manifests
       - name: Deploy to EKS
         run: |
           kubectl apply -f kubernetes/deployment.yaml --validate=false
           kubectl apply -f kubernetes/service.yaml --validate=false
-          kubectl apply -f kubernetes/ingress.yaml --validate=false || echo "No ingress.yaml found"
+          kubectl apply -f kubernetes/ingress.yaml --validate=false
       
-      # ✅ Verify
+      # ✅ Verify deployment
       - name: Verify Deployment
         run: |
           kubectl get pods -o wide
           kubectl get svc
+          kubectl get ingress
