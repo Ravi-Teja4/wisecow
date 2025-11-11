@@ -1,0 +1,114 @@
+Accuknox DevOps Trainee Practical Assessment – Final Submission
+
+Problem Statement 1: Containerization and Deployment of Wisecow Application
+Objective:
+Containerize and deploy the Wisecow application on Kubernetes with secure TLS communication and automated CI/CD pipeline.
+
+Repository: https://github.com/Ravi-Teja4/wisecow
+Approach Taken:
+
+Dockerization:
+
+Developed a Dockerfile for building the Wisecow application container image.
+
+Image was tested locally and pushed to AWS ECR.
+
+Kubernetes Deployment:
+
+Crafted Kubernetes manifests (deployment.yaml, service.yaml, ingress.yaml) to deploy Wisecow in EKS.
+
+Exposed the application using a LoadBalancer service.
+
+TLS Implementation:
+
+Secured the application using AWS ACM for HTTPS with the domain devopswithravi.
+
+CI/CD Pipeline:
+
+Created a GitHub Actions workflow to automate:
+
+Building and pushing Docker images to ECR.
+
+Optional: Automatically deploying the updated image to Kubernetes after successful builds.
+Outcome:
+
+The application is containerized and deployed securely.
+
+TLS encryption ensures secure communication.
+
+CI/CD pipeline enables automated builds and deployment.
+
+Website currently inaccessible due to AWS account limits, but full deployment steps and configurations are ready.
+Problem Statement 2: System & Application Monitoring
+
+Objective:
+Implement monitoring scripts to ensure the health of the system and application.
+
+Tasks Completed:
+
+System Health Monitoring Script:
+
+Developed system_health_monitor.py to monitor: CPU usage, Memory usage, Disk utilization, Running processes.
+
+Sends alerts to console/logs if thresholds are breached (e.g., CPU > 80%).
+
+Application Health Checker:
+
+Created a script to check the uptime and availability of the Wisecow application.
+
+Script verifies HTTP status codes to determine if the app is 'up' or 'down'.
+
+Outcome:
+
+Continuous monitoring of system resources and application status.
+
+Automatic detection of failures ensures reliability and uptime.
+
+Problem Statement 3: Zero-Trust KubeArmor Policy (Optional / Extra Credit)
+
+Objective:
+Apply a zero-trust security policy to the deployed Kubernetes workload.
+
+Approach Taken:
+
+Developed a KubeArmor policy (wisecow-zero-trust.yaml) to restrict:
+
+File access (Block all except allowed binaries)
+
+Process execution (Block all except application binaries)
+
+Network access (Block all except required endpoints)
+
+Applied the policy to the Wisecow deployment.
+
+Triggered policy violations to test the zero-trust enforcement.
+
+Outcome:
+
+Zero-trust security enforced at the workload level.
+
+Policy violations captured and documented (screenshot committed to repo).
+
+Overall Conclusion:
+
+Wisecow application is containerized, deployed, and secured on Kubernetes with TLS encryption.
+
+CI/CD automation ensures continuous build and deployment.
+
+System and application health monitoring scripts provide reliable uptime and alerting.
+
+Zero-trust KubeArmor policy enforces strong security at the workload level.
+
+Artifacts Submitted:
+
+Dockerfile, Kubernetes manifests, CI/CD workflow YAML
+
+Health monitoring scripts (system_health_monitor.py, application checker)
+
+KubeArmor policy YAML and screenshot of policy violations
+
+Personal Statement:
+
+I recently worked on this project, which aligns closely with the requirements of the DevOps role at your organization. 
+If I get selected, I am committed to giving my 100% best and contributing positively to your team. 
+I believe my skills and experience match your requirements, and I am eager to apply my knowledge in real-world projects to help your organization succeed.
