@@ -1,0 +1,24 @@
+apiVersion: security.kubearmor.com/v1
+kind: KubeArmorPolicy
+metadata:
+  name: wisecow-zero-trust
+spec:
+  selector:
+    matchLabels:
+      app: wisecow   # matches your deployment pods
+  file:
+    matchPaths:
+      - path: "/"      # Deny all file accesses by default
+        action: Block
+      - path: "/usr/bin/wisecow"
+        action: Allow   # Allow only your binary (adjust path)
+  process:
+    matchPaths:
+      - path: "*"       # Deny all process executions
+        action: Block
+      - path: "/usr/bin/wisecow"
+        action: Allow
+  network:
+    matchProtocols:
+      - protocol: TCP
+        action: Block   # Deny all TCP traffic by default
