@@ -62,16 +62,18 @@ jobs:
       - name: Test kubectl
         run: kubectl get nodes
       
-      # ✅ Create self-signed TLS secret
-      - name: Create Self-Signed TLS Secret
+      - name: Create Kubernetes TLS secret
         run: |
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout tls.key -out tls.crt \
-            -subj "/CN=${ELB_DNS}"
           kubectl create secret tls wisecow-tls \
-            --cert=tls.crt \
-            --key=tls.key \
-            --dry-run=client -o yaml | kubectl apply -f -
+          --cert=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -subj "/CN=wisecow.local" \
+          -addext "subjectAltName=DNS:a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com" \
+          -keyout /dev/stdout -out /dev/stdout) \
+          --key=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -subj "/CN=wisecow.local" \
+          -addext "subjectAltName=DNS:a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com" \
+          -keyout /dev/stdout -out /dev/null)
+
       
       # ✅ Deploy manifests
       - name: Deploy to EKS
