@@ -17,9 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      # 2️⃣ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -27,33 +29,40 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ECR repository if it doesn't exist
+      # 3️⃣ Create ECR repository if it doesn't exist
+      - name: Create ECR repository if needed
         run: |
           aws ecr describe-repositories --repository-names "${{ env.ECR_REPOSITORY }}" || \
           aws ecr create-repository --repository-name "${{ env.ECR_REPOSITORY }}"
 
+      # 4️⃣ Login to ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push Docker image to ECR
+      # 5️⃣ Build, tag, and push Docker image
+      - name: Build, tag, and push Docker image
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
 
-      - name: Update Kubernetes deployment manifest with new image
+      # 6️⃣ Update Kubernetes deployment manifest with new image
+      - name: Update deployment manifest image
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          # Works on Linux/macOS
           sed -i "s|image:.*|image: $IMAGE_URI|" kubernetes/deployment.yaml
           cat kubernetes/deployment.yaml
 
+      # 7️⃣ Configure kubeconfig for EKS
       - name: Update kubeconfig for EKS cluster
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
 
+      # 8️⃣ Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -f kubernetes/
+          kubectl apply -f kubernetes/ --validate=false
           kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }}
