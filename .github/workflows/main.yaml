@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  AWS_REGION: us-east-1           # Must match your ECR region
+  AWS_REGION: us-east-1
   ECR_REPOSITORY: wisecow
   CLUSTER_NAME: my-eks-cluster
   DEPLOYMENT_NAME: wisecow-deployment
@@ -21,15 +21,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials
+      # 2️⃣ Configure AWS credentials via OIDC
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Create ECR repository if it doesn't exist
+      # 3️⃣ Ensure ECR repository exists
       - name: Ensure ECR repository exists
         run: |
           aws ecr describe-repositories --repository-names "${{ env.ECR_REPOSITORY }}" || \
@@ -48,11 +47,10 @@ jobs:
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
 
-      # 6️⃣ Update deployment manifest with new image
+      # 6️⃣ Update Kubernetes deployment manifest dynamically
       - name: Update Kubernetes deployment manifest
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          # Replace image in deployment.yaml
           sed -i "s|image:.*|image: $IMAGE_URI|" kubernetes/deployment.yaml
           cat kubernetes/deployment.yaml
 
