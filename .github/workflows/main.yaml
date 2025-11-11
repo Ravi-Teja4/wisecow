@@ -5,10 +5,6 @@ on:
     branches:
       - main
 
-permissions:
-  id-token: write
-  contents: read
-
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: wisecow
@@ -26,33 +22,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Configure AWS credentials (use OIDC instead of static keys)
+      # ✅ Configure AWS credentials (using access keys)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::625684987071:role/GitHubActions-EKS-DeployRole
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ✅ Login to ECR
+      # ✅ Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # ✅ Build & Push Image to ECR
-      - name: Build and Push Docker image
+      # ✅ Build and push Docker image to ECR
+      - name: Build, tag, and push image
         env:
           IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
-      # ✅ Configure kubectl for EKS
+      # ✅ Configure kubectl to access your EKS cluster
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      # ✅ Create ECR Secret in Kubernetes
-      - name: Create or Update imagePullSecret
+      # ✅ Create or update imagePullSecret for ECR
+      - name: Create ECR secret in Kubernetes
         run: |
           kubectl delete secret ecr-secret --ignore-not-found
           aws ecr get-login-password --region $AWS_REGION | kubectl create secret docker-registry ecr-secret \
@@ -60,7 +57,7 @@ jobs:
             --docker-username=AWS \
             --docker-password-stdin
 
-      # ✅ Deploy manifests to EKS
+      # ✅ Deploy Kubernetes manifests
       - name: Deploy to EKS
         run: |
           kubectl apply -f kubernetes/deployment.yaml --validate=false
