@@ -4,6 +4,7 @@ metadata:
   name: wisecow-ingress
   annotations:
     kubernetes.io/ingress.class: "nginx"
+    # No cert-manager needed for self-signed certificate
 spec:
   tls:
     - hosts:
@@ -17,7 +18,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wisecow-service
+                name: wisecow-service   # Replace with your actual service name
                 port:
                   number: 80
-
