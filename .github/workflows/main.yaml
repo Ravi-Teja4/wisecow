@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - main
+
 permissions:
-  id-token: write   # Required for OIDC to assume AWS role
-  contents: read    # Required to checkout repository code
+  id-token: write   # Needed for OIDC to assume AWS role
+  contents: read    # Needed to checkout repository
 
 env:
   AWS_REGION: us-east-1
@@ -18,9 +19,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write       # Required for OIDC
-      contents: read        # Required to checkout code
 
     steps:
       # 1️⃣ Checkout repository
