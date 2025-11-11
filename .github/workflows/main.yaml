@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout source code
+      # 1️⃣ Checkout source code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       # 2️⃣ Configure AWS credentials
@@ -30,7 +30,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # 3️⃣ Create ECR repository if it doesn't exist
-      - name: Create ECR repository if needed
+      - name: Ensure ECR repository exists
         run: |
           aws ecr describe-repositories --repository-names "${{ env.ECR_REPOSITORY }}" || \
           aws ecr create-repository --repository-name "${{ env.ECR_REPOSITORY }}"
@@ -44,22 +44,25 @@ jobs:
       - name: Build, tag, and push Docker image
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          echo "Building image: $IMAGE_URI"
+          echo "Building Docker image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
 
-      # 6️⃣ Update Kubernetes deployment manifest with new image
-      - name: Update deployment manifest image
+      # 6️⃣ Update deployment manifest with new image
+      - name: Update Kubernetes deployment manifest
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          # Works on Linux/macOS
+          # Replace image in deployment.yaml
           sed -i "s|image:.*|image: $IMAGE_URI|" kubernetes/deployment.yaml
           cat kubernetes/deployment.yaml
 
       # 7️⃣ Configure kubeconfig for EKS
-      - name: Update kubeconfig for EKS cluster
+      - name: Configure kubeconfig
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+          export KUBECONFIG=$HOME/.kube/config
+          echo "Verifying EKS connection..."
+          kubectl get nodes
 
       # 8️⃣ Deploy to Kubernetes
       - name: Deploy to Kubernetes
