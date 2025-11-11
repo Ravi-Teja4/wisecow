@@ -13,75 +13,77 @@ env:
   ECR_REGISTRY: 625684987071.dkr.ecr.us-east-1.amazonaws.com
   ELB_DNS: a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com
   SERVICE_NAME: wisecow-service
+  SECRET_NAME: wisecow-tls
+  IMAGE_TAG: latest
 
 jobs:
   deploy:
     name: Build and Deploy to EKS
     runs-on: ubuntu-latest
-    
+
     steps:
-      # ✅ Checkout source
+      # ✅ Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # ✅ Configure AWS credentials (using secrets)
+
+      # ✅ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      
-      # 🐛 Debug AWS Credentials
+
+      # 🐛 Debug AWS credentials
       - name: Debug AWS Credentials
         run: |
           echo "Checking AWS configuration..."
           aws sts get-caller-identity || echo "AWS auth failed"
           echo "AWS_REGION: $AWS_REGION"
           echo "CLUSTER_NAME: $CLUSTER_NAME"
-      
-      # ✅ Login to ECR
+
+      # ✅ Login to Amazon ECR
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      
-      # ✅ Build & Push Docker image
+
+      # ✅ Build and Push Docker image
       - name: Build and Push Docker image
-        env:
-          IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
-      
+
       # ✅ Update kubeconfig
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-      
+
       # 🐛 Test kubectl connection
       - name: Test kubectl
         run: kubectl get nodes
-      
+
+      # ✅ Generate TLS certificate and key
+      - name: Generate TLS certificate & key
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -subj "/CN=wisecow.local" \
+            -addext "subjectAltName=DNS:${{ env.ELB_DNS }}" \
+            -keyout tls.key -out tls.crt
+
+      # ✅ Create Kubernetes TLS secret
       - name: Create Kubernetes TLS secret
         run: |
-          kubectl create secret tls wisecow-tls \
-          --cert=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-          -subj "/CN=wisecow.local" \
-          -addext "subjectAltName=DNS:a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com" \
-          -keyout /dev/stdout -out /dev/stdout) \
-          --key=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-          -subj "/CN=wisecow.local" \
-          -addext "subjectAltName=DNS:a9fbd3c128fd5421b8b3f60254bc5d11-1408750103.us-east-1.elb.amazonaws.com" \
-          -keyout /dev/stdout -out /dev/null)
+          kubectl delete secret ${{ env.SECRET_NAME }} --ignore-not-found
+          kubectl create secret tls ${{ env.SECRET_NAME }} \
+            --cert=tls.crt \
+            --key=tls.key
 
-      
-      # ✅ Deploy manifests
+      # ✅ Deploy Kubernetes manifests
       - name: Deploy to EKS
         run: |
           kubectl apply -f kubernetes/deployment.yaml --validate=false
           kubectl apply -f kubernetes/service.yaml --validate=false
           kubectl apply -f kubernetes/ingress.yaml --validate=false
-      
+
       # ✅ Verify deployment
       - name: Verify Deployment
         run: |
